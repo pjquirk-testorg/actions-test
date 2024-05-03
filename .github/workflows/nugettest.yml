@@ -18,4 +18,5 @@ jobs:
       
       - run: ls -a
       - run: dotnet restore Jellyfin.sln --verbosity detailed
+      - run: dotnet nuget locals all --clear
       - run: dotnet restore Jellyfin.sln --verbosity detailed --force
