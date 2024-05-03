@@ -17,4 +17,4 @@ jobs:
           repository: 'jellyfin/jellyfin'
       
       - run: ls -a
-      - run: dotnet restore JellyFin.sln --verbosity detailed
+      - run: dotnet restore Jellyfin.sln --verbosity detailed
