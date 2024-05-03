@@ -20,3 +20,4 @@ jobs:
       - run: dotnet restore Jellyfin.sln --verbosity detailed
       - run: dotnet nuget locals all --clear
       - run: dotnet restore Jellyfin.sln --verbosity detailed --force
+      - run: grep "_conntrack" < /var/log/messages
