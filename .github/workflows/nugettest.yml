@@ -23,4 +23,3 @@ jobs:
       - run: dotnet nuget locals all --clear
       - run: nuget config -Set maxHttpRequestsPerSource=16
       - run: dotnet restore Jellyfin.sln --verbosity detailed --force
-      - run: conntrack --dump conntrack
