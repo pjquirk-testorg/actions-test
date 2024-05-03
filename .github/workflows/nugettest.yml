@@ -17,7 +17,9 @@ jobs:
           repository: 'jellyfin/jellyfin'
       
       - run: ls -a
-      - run: dotnet restore Jellyfin.sln --verbosity detailed
+      - run: dotnet restore Jellyfin.sln --verbosity detailed > nugetoutput.txt
+      - run: grep "GET " < nugetoutput.txt
+      - run: grep "GET " < nugetoutput.txt | wc -l
       - run: dotnet nuget locals all --clear
       - run: dotnet restore Jellyfin.sln --verbosity detailed --force
-      - run: grep "_conntrack" < /var/log/messages
+      - run: conntrack --dump conntrack
