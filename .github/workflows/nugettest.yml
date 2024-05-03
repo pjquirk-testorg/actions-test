@@ -16,5 +16,5 @@ jobs:
           # Default: ${{ github.repository }}
           repository: 'jellyfin/jellyfin'
       
-      # Runs a single command using the runners shell
+      - run: ls -a
       - run: dotnet restore JellyFin.sln --verbosity detailed
