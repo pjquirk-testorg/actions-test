@@ -7,19 +7,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
         with:
-          # Repository name with owner. For example, actions/checkout
-          # Default: ${{ github.repository }}
-          repository: 'jellyfin/jellyfin'
+          repository: 'AvaloniaUI/Avalonia'
       
       - run: ls -a
-      - run: dotnet restore Jellyfin.sln --verbosity detailed > nugetoutput.txt
+      - run: dotnet restore Avalonia.sln --verbosity detailed > nugetoutput.txt
       - run: grep "GET " < nugetoutput.txt
-      - run: grep "GET " < nugetoutput.txt | wc -l
+      
       - run: dotnet nuget locals all --clear
       - run: nuget config -Set maxHttpRequestsPerSource=16
-      - run: dotnet restore Jellyfin.sln --verbosity detailed --force
+      
+      - run: dotnet restore Avalonia.sln --verbosity detailed --force > nugetoutput2.txt
+      - run: grep "GET " < nugetoutput2.txt
