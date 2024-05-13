@@ -1,4 +1,4 @@
-name: Nuget Test
+name: Vnet Test
 
 on:  
   workflow_dispatch:
