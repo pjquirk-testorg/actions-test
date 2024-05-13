@@ -1,0 +1,12 @@
+name: Nuget Test
+
+on:  
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: pjq-test-vnet
+
+    steps:
+      - uses: actions/checkout@v4
+      - run: ifconfig
