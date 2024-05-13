@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: pjq-test-vnet
+    runs-on: pjquirk-linux
 
     steps:
       - run: ifconfig
