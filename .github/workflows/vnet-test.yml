@@ -8,5 +8,4 @@ jobs:
     runs-on: pjq-test-vnet
 
     steps:
-      - uses: actions/checkout@v4
       - run: ifconfig
