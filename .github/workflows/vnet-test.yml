@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: pjquirk-linux
+    runs-on: Patricks-MBP
 
     steps:
       - run: ifconfig
