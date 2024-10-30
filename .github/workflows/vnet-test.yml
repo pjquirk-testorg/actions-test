@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: [ "Patricks-MBP", "self-hosted" ]
+    runs-on: [ "self-hosted" ]
 
     steps:
       - run: ifconfig
