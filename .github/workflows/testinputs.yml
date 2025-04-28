@@ -19,7 +19,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const theNumber = ${{ github.event.inputs.the_number }}
+            const theNumber = context.inputs?.the_number
             console.log("The number: ")
             console.log(theNumber)
 
