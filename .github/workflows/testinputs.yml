@@ -1,0 +1,22 @@
+name: Test inputs
+
+on:
+  workflow_dispatch:
+    inputs:
+      the_number:
+        description: 'Random number'
+        required: true
+        type: number
+  
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump the argument
+        uses: actions/github-script@v7
+        with:
+          script: |           
+            const theNumber = github.inputs.issue_number;
+            console.log("The number: ")
+            console.log(theNumber)
+            
