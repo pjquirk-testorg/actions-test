@@ -22,4 +22,9 @@ jobs:
             const theNumber = ${{ github.event.inputs.the_number }}
             console.log("The number: ")
             console.log(theNumber)
-            
+
+            console.log("JSON.stringify(github.event):") 
+            console.log(JSON.stringify(github.event)) 
+
+            console.log("JSON.stringify(github.inputs):") 
+            console.log(JSON.stringify(github.inputs))             
