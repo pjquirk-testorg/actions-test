@@ -34,3 +34,4 @@ jobs:
         
       - name: Run if an issue was opened
         if: ${{ github.event_name }} # only if this was started from an issue event
+        run: echo Yay
