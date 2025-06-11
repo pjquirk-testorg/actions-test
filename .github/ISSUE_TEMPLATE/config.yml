@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: GitHub Actions Support Escalation
+    url: https://catalog.githubapp.com/services/actions/support
+    about: Please raise general Actions engineering escalations here.
+  - name: GitHub Actions GHES Support Escalations
+    url: https://catalog.githubapp.com/services/actions-ghes/support
+    about: Please raise Actions on GitHub Enterprise Server engineering escalations here.
+  - name: GitHub Actions Larger Hosted Runner Support Escalations
+    url: https://catalog.githubapp.com/services/actions-larger-runners/support
+    about: Please raise Larger Hosted Runner engineering escalations here.
