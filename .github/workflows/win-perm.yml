@@ -1,0 +1,17 @@
+# https://github.com/github/c2c-actions-support/issues/4894
+name: Windows SSH Perm
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        win: [pjquirk-win-2025, pjquirk-win-2022, windows-latest, windows-2025]
+    runs-on: ${{ matrix.win }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ssh-key: "${{ secrets.TMP_SSH_KEY }}"
