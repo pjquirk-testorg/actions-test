@@ -1,0 +1,244 @@
+name: Windows Testing
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        win: [pjquirk-win-2025, pjquirk-win-2022]
+    runs-on: ${{ matrix.win }}
+    steps:
+    - name: Display the path
+      shell: pwsh
+      run: |
+        Set-StrictMode -Version Latest
+        $ErrorActionPreference = 'Stop'
+        $ProgressPreference = 'SilentlyContinue'        
+
+        function Test-NetworkEndpointConnectivity {
+            param([string]$Row)
+            $StartTime = Get-Date
+            $Parts = $Row -split ','
+            $Index = $Parts[0]
+            $Url = $Parts[1]
+            if ([string]::IsNullOrWhiteSpace($Url)) {
+                return
+            }
+            & curl.exe --ssl-no-revoke --max-time 4 --connect-timeout 2 --silent "$Url" *> $null
+            $ExitCode = $LASTEXITCODE
+            $Duration = [math]::Round((Get-Date).Subtract($StartTime).TotalSeconds)
+            Write-Output "$Index,$ExitCode,$Duration"
+        }
+
+        function Test-NetworkConnectivity {
+            param([array]$UrlsToTest,
+                [string]$GitHubUrl = "https://github.com",
+                [int]$MaxThreads = 32,
+                [int]$TimeoutSeconds = 20)
+            # See HostedComputeNetworkChecker for usage of these markers
+            $NetStartMarker = "::NetStart::"
+            $NetEndMarker = "::NetEnd::"
+            $HttpProxyFoundMarker = "::HttpProxyFound::"
+            $HttpsProxyFoundMarker = "::HttpsProxyFound::"
+            $HttpsMitmMarker = "::HttpsMitm::"
+            $PwshJobsTimedoutMarker = "::pwshJobsTimedout::"
+
+            Write-Output $NetStartMarker
+            $StartTime = Get-Date
+
+            # Start jobs to test network connectivity
+            $iss = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
+            $iss.ApartmentState = [System.Threading.ApartmentState]::MTA
+            $pool = [Runspacefactory]::CreateRunspacePool(1, $MaxThreads, $iss, $host)
+            $pool.Open()
+
+            # Convert each URL to a Runspace job
+            $Jobs = $UrlsToTest | Where-Object { $_ -and $_.Trim() } | ForEach-Object {
+                $powershell = [powershell]::Create().AddScript(${function:Test-NetworkEndpointConnectivity}).AddArgument($_.Trim())
+                $powershell.RunspacePool = $pool
+                @{
+                    Instance = $powershell
+                    Handle = $powershell.BeginInvoke()
+                }
+            }
+
+            $ElapsedTime = New-TimeSpan -Start $StartTime
+            Write-Output "::NetThreadsCreated::$($ElapsedTime.TotalSeconds)"
+
+            # Wait for all the jobs to complete, or until we timeout waiting
+            $RemainingJobs = $Jobs.Count
+            while ($RemainingJobs -gt 0 -and $ElapsedTime.TotalSeconds -lt $TimeoutSeconds)
+            {
+                for ($i = 0; $i -lt $Jobs.Count; $i++)
+                {
+                    $Job = $Jobs[$i]
+                    if ($Job -and $Job.Handle.IsCompleted)
+                    {
+                        $Job.Instance.EndInvoke($Job.Handle)
+                        $Job.Instance.Dispose()
+                        $Jobs[$i] = $null
+                        $RemainingJobs--
+                    }
+                }
+
+                Start-Sleep -Milliseconds 200
+                $ElapsedTime = New-TimeSpan -Start $StartTime
+            }
+
+            if ($ElapsedTime.TotalSeconds -ge $TimeoutSeconds) {
+                Write-Output $PwshJobsTimedoutMarker
+            }
+
+            $pool.Close()
+            $pool.Dispose()
+
+            Write-Output $NetEndMarker
+            Write-Output "::NetElapsedTime::$($ElapsedTime.TotalSeconds)"
+
+            if ($env:http_proxy) { Write-Output $HttpProxyFoundMarker }
+            if ($env:https_proxy) { Write-Output $HttpsProxyFoundMarker }
+
+            $MitmFound = & curl.exe --ssl-no-revoke -k --max-time 4 --connect-timeout 2 -s -v $GitHubUrl 2>&1 | Select-String -Pattern 'O=Sectigo Limited' -Quiet
+            if (-not $MitmFound) {
+                Write-Output $HttpsMitmMarker
+            }
+        }
+        try {         
+            $UrlsToTest = @(
+                "0,https://github.com",
+                "1,https://api.github.com",
+                "2,https://codeload.github.com",
+                "3,https://objects.githubusercontent.com",
+                "4,https://objects-origin.githubusercontent.com",
+                "5,https://github-releases.githubusercontent.com",
+                "6,https://github-registry-files.githubusercontent.com",
+                "7,https://vstoken.actions.githubusercontent.com",
+                "8,https://broker.actions.githubusercontent.com",
+                "9,https://launch.actions.githubusercontent.com",
+                "10,https://runner-auth.actions.githubusercontent.com",
+                "11,https://release-assets.githubusercontent.com",
+                "12,https://run-actions-1-azure-eastus.actions.githubusercontent.com",
+                "13,https://run-actions-2-azure-eastus.actions.githubusercontent.com",
+                "14,https://run-actions-3-azure-eastus.actions.githubusercontent.com",
+                "15,https://setup-tools.actions.githubusercontent.com",
+                "16,https://ghcr.io",
+                "17,https://npm.pkg.github.com",
+                "18,https://npm-proxy.pkg.github.com",
+                "19,https://npm-beta-proxy.pkg.github.com",
+                "20,https://npm-beta.pkg.github.com",
+                "21,https://nuget.pkg.github.com",
+                "22,https://rubygems.pkg.github.com",
+                "23,https://maven.pkg.github.com",
+                "24,https://docker.pkg.github.com",
+                "25,https://docker-proxy.pkg.github.com",
+                "26,https://pypi.pkg.github.com",
+                "27,https://containers.pkg.github.com",
+                "28,https://swift.pkg.github.com",
+                "29,https://pkg.actions.githubusercontent.com",
+                "30,https://results-receiver.actions.githubusercontent.com",
+                "31,https://productionresultssa0.blob.core.windows.net",
+                "32,https://productionresultssa1.blob.core.windows.net",
+                "33,https://productionresultssa2.blob.core.windows.net",
+                "34,https://productionresultssa3.blob.core.windows.net",
+                "35,https://productionresultssa4.blob.core.windows.net",
+                "36,https://productionresultssa5.blob.core.windows.net",
+                "37,https://productionresultssa6.blob.core.windows.net",
+                "38,https://productionresultssa7.blob.core.windows.net",
+                "39,https://productionresultssa8.blob.core.windows.net",
+                "40,https://productionresultssa9.blob.core.windows.net",
+                "41,https://productionresultssa10.blob.core.windows.net",
+                "42,https://productionresultssa11.blob.core.windows.net",
+                "43,https://productionresultssa12.blob.core.windows.net",
+                "44,https://productionresultssa13.blob.core.windows.net",
+                "45,https://productionresultssa14.blob.core.windows.net",
+                "46,https://productionresultssa15.blob.core.windows.net",
+                "47,https://productionresultssa16.blob.core.windows.net",
+                "48,https://productionresultssa17.blob.core.windows.net",
+                "49,https://productionresultssa18.blob.core.windows.net",
+                "50,https://productionresultssa19.blob.core.windows.net",
+                "51,https://mmsghadocfr1.actions.githubusercontent.com",
+                "52,https://mmsghadocus1.actions.githubusercontent.com",
+                "53,https://mmsghadocus2.actions.githubusercontent.com",
+                "54,https://mmsghadoeus1.actions.githubusercontent.com",
+                "55,https://mmsghadoeus2.actions.githubusercontent.com",
+                "56,https://mmsghadoeus21.actions.githubusercontent.com",
+                "57,https://mmsghadoeus22.actions.githubusercontent.com",
+                "58,https://mmsghadoeus3.actions.githubusercontent.com",
+                "59,https://mmsghadoneu1.actions.githubusercontent.com",
+                "60,https://mmsghadopfeus2c1.actions.githubusercontent.com",
+                "61,https://mmsghadowcus0.actions.githubusercontent.com",
+                "62,https://mmsghadoweu1.actions.githubusercontent.com",
+                "63,https://mmsghadowus1.actions.githubusercontent.com",
+                "64,https://mmsghadowus21.actions.githubusercontent.com",
+                "65,https://mmsghubcswe1.actions.githubusercontent.com",
+                "66,https://mmsghubcus1.actions.githubusercontent.com",
+                "67,https://mmsghubcus2.actions.githubusercontent.com",
+                "68,https://mmsghubcus3.actions.githubusercontent.com",
+                "69,https://mmsghubeau1.actions.githubusercontent.com",
+                "70,https://mmsghubeus1.actions.githubusercontent.com",
+                "71,https://mmsghubeus2.actions.githubusercontent.com",
+                "72,https://mmsghubeus20.actions.githubusercontent.com",
+                "73,https://mmsghubeus21.actions.githubusercontent.com",
+                "74,https://mmsghubeus22.actions.githubusercontent.com",
+                "75,https://mmsghubeus23.actions.githubusercontent.com",
+                "76,https://mmsghubeus3.actions.githubusercontent.com",
+                "77,https://mmsghubeus4.actions.githubusercontent.com",
+                "78,https://mmsghubeus5.actions.githubusercontent.com",
+                "79,https://mmsghubneu1.actions.githubusercontent.com",
+                "80,https://mmsghubseau1.actions.githubusercontent.com",
+                "81,https://mmsghubweu1.actions.githubusercontent.com",
+                "82,https://mpsghub.actions.githubusercontent.com",
+                "83,https://pipelinesghubeus1.actions.githubusercontent.com",
+                "84,https://pipelinesghubeus10.actions.githubusercontent.com",
+                "85,https://pipelinesghubeus11.actions.githubusercontent.com",
+                "86,https://pipelinesghubeus12.actions.githubusercontent.com",
+                "87,https://pipelinesghubeus13.actions.githubusercontent.com",
+                "88,https://pipelinesghubeus14.actions.githubusercontent.com",
+                "89,https://pipelinesghubeus15.actions.githubusercontent.com",
+                "90,https://pipelinesghubeus2.actions.githubusercontent.com",
+                "91,https://pipelinesghubeus20.actions.githubusercontent.com",
+                "92,https://pipelinesghubeus21.actions.githubusercontent.com",
+                "93,https://pipelinesghubeus22.actions.githubusercontent.com",
+                "94,https://pipelinesghubeus23.actions.githubusercontent.com",
+                "95,https://pipelinesghubeus24.actions.githubusercontent.com",
+                "96,https://pipelinesghubeus25.actions.githubusercontent.com",
+                "97,https://pipelinesghubeus26.actions.githubusercontent.com",
+                "98,https://pipelinesghubeus3.actions.githubusercontent.com",
+                "99,https://pipelinesghubeus4.actions.githubusercontent.com",
+                "100,https://pipelinesghubeus5.actions.githubusercontent.com",
+                "101,https://pipelinesghubeus6.actions.githubusercontent.com",
+                "102,https://pipelinesghubeus7.actions.githubusercontent.com",
+                "103,https://pipelinesghubeus8.actions.githubusercontent.com",
+                "104,https://pipelinesghubeus9.actions.githubusercontent.com",
+                "105,https://pipelinesproxcnc1.actions.githubusercontent.com",
+                "106,https://pipelinesproxcus1.actions.githubusercontent.com",
+                "107,https://pipelinesproxeau1.actions.githubusercontent.com",
+                "108,https://pipelinesproxsdc1.actions.githubusercontent.com",
+                "109,https://pipelinesproxweu1.actions.githubusercontent.com",
+                "110,https://pipelinesproxwus31.actions.githubusercontent.com",
+                "111,https://runnerghubeus1.actions.githubusercontent.com",
+                "112,https://runnerghubeus20.actions.githubusercontent.com",
+                "113,https://runnerghubeus21.actions.githubusercontent.com",
+                "114,https://runnerghubwus31.actions.githubusercontent.com",
+                "115,https://runnerproxcnc1.actions.githubusercontent.com",
+                "116,https://runnerproxcus1.actions.githubusercontent.com",
+                "117,https://runnerproxeau1.actions.githubusercontent.com",
+                "118,https://runnerproxsdc1.actions.githubusercontent.com",
+                "119,https://runnerproxweu1.actions.githubusercontent.com",
+                "120,https://tokenghub.actions.githubusercontent.com"
+                )
+            if ($env:http_proxy) {
+                $UrlsToTest += "901,$env:http_proxy"
+            }
+            if ($env:https_proxy) {
+                $UrlsToTest += "902,$env:https_proxy"
+            }
+            # Add old abuse tools URL
+            $UrlsToTest += "903,https://provjobdprod.z13.web.core.windows.net"
+            Test-NetworkConnectivity -UrlsToTest $UrlsToTest    
+        } catch {
+            Write-Error "Network connectivity test failed: $_"     
+        }
