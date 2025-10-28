@@ -1,0 +1,13 @@
+name: matlab Testing
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: pjquirk-win-2025
+    steps:
+    - name: GCI
+      shell: pwsh
+      run: Get-ChildItem -Path "D:\hostedtoolcache"
